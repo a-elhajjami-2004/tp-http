@@ -57,16 +57,17 @@ curl \
 
 ### Exercice pratique
 
-<!--  -->
-
 ```js
-function fetchWithRetries(url, options, maxRetries) {
-	/*
-	Effectue une requête HTTP
-	En cas d'erreur 5xx, réessaie jusqu'à maxRetries fois
-	Attend 1 seconde entre chaque tentative
-	Retourne la réponse ou lève une erreur
-	*/
+async function fetchWithRetries(url, options, maxRetries) {
+	let response = await fetch(url, options);
+	for (let retry = 0; retry < maxRetries && response.status >= 500; retry++) {
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+		response = await fetch(url, options);
+	}
+	if (!response.ok && response.status >= 500) {
+		throw new Error(`Nombre de tentatives dépassé. Status ${response.status}`);
+	}
+	return response;
 }
 ```
 
@@ -77,3 +78,28 @@ function fetchWithRetries(url, options, maxRetries) {
 | [github.com](https://github.com)                         | `max-age=31536000; includeSubdomains; preload` | `deny`            | `default-src 'none'; base-uri 'self'; child-src github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/ gist.github.com/assets-cdn/worker/; [...]` | A    |
 | [google.com](https://google.com)                         | `max-age=31536000`                             | `SAMEORIGIN`      | Pas présent                                                                                                                                                         | C    |
 | [store.steampowered.com](https://store.steampowered.com) | `max-age=63072000`                             | `DENY`            | `default-src blob: data: https: 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://store.fastly.steamstatic.com/ [...]`         | B    |
+
+## Exercice Récapitualtifs
+
+### Client HTTP minimaliste
+
+Voir [le TP précédent](https://github.com/a-elhajjami-2004/tp-http-requests)
+
+### Questions théoriques
+
+1. La directive `no-cache` indique que la réponse peut être mise en cache, mais doit être validée avec le serveur
+   d'origine à chaque réutilisation.
+
+    La directive `no-store` indique que la réponse ne doit pas être mise en cache.
+
+1. La méthode POST n'est pas idempotente car si elle est appelée plusieurs fois, une ressource peut être créée
+   plusieurs fois. Donc si elle est appelée plus d'une fois, elle peut avoir un effet différent sur le serveur
+   chaque fois.
+
+1. Lorsque le serveur renvoie un code 301, le client sera redirégé au chemin donné dans le header `Location`.
+
+1. Le header `Origin` indique l'origine de la requête. Il n'est pas ajouté au requêtes GET/HEAD vers le même hôte que
+   l'origine (same-origin). Il est toujours ajouté au requête vers un hôte différent de l'origine (cross-origin).
+
+1. L'attribut `HttpOnly` des cookies interdit d'accéder à ce cookie depuis JavaScript. Ceci protège contre les attaques
+   XSS.
